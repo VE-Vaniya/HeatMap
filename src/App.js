@@ -1,179 +1,169 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet.heat';
+import 'leaflet/dist/leaflet.css';
 import './App.css';
 
-function App() {
-  const [locations, setLocations] = useState([
-    { lat: '35.6762', lng: '139.6503' }, // Tokyo (Location 1)
-    { lat: '40.7128', lng: '-74.0060' }  // New York (Location 2)
-  ]);
-  const [aqiData, setAqiData] = useState([null, null]);
+function HeatmapLayer({ data }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!data.length) return;
+
+    const heatLayer = L.heatLayer(data, {
+      radius: 25,
+      blur: 15,
+      maxZoom: 8,
+      gradient: {
+        0.1: 'blue',
+        0.3: 'cyan',
+        0.5: 'lime',
+        0.7: 'yellow',
+        1.0: 'red'
+      }
+    }).addTo(map);
+
+    return () => map.removeLayer(heatLayer);
+  }, [data, map]);
+
+  return null;
+}
+
+function SmogDensityMap() {
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [location1, setLocation1] = useState({ lat: '', lng: '' });
+  const [location2, setLocation2] = useState({ lat: '', lng: '' });
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState([false, false]);
 
-  const aqiColors = {
-    1: '#00e400',  // Green
-    2: '#ffff00',  // Yellow
-    3: '#ff7e00',  // Orange
-    4: '#ff0000',  // Red
-    5: '#8f3f97'   // Purple
-  };
-
-  const getAqiColor = (level) => {
-    return aqiColors[level] || '#cccccc';
-  };
-
-  const handleFetchAQI = async (index) => {
-    const lat = parseFloat(locations[index].lat);
-    const lng = parseFloat(locations[index].lng);
-
-    if (isNaN(lat) || isNaN(lng)) {
-      setError("Please enter valid numeric coordinates");
-      return;
+  const fetchSmogData = async (lat, lng) => {
+    try {
+      const response = await fetch(`http://localhost:5000/aqi-data?lat=${lat}&lng=${lng}`);
+      if (!response.ok) throw new Error('Failed to fetch smog data');
+      return await response.json();
+    } catch (err) {
+      console.error('Error fetching smog data:', err);
+      throw err;
     }
+  };
 
-    const newLoading = [...isLoading];
-    newLoading[index] = true;
-    setIsLoading(newLoading);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     setError('');
 
     try {
-      const response = await axios.get('http://localhost:5000/aqi-data', {
-        params: { lat, lng },
-        timeout: 8000
-      });
-      
-      if (!response.data?.location) {
-        throw new Error("Invalid data format from server");
-      }
-      
-      const newAqiData = [...aqiData];
-      newAqiData[index] = response.data;
-      setAqiData(newAqiData);
+      // Fetch data for both locations
+      const [data1, data2] = await Promise.all([
+        fetchSmogData(location1.lat, location1.lng),
+        fetchSmogData(location2.lat, location2.lng)
+      ]);
+
+      // Normalize smog levels to 0-1 range for heatmap
+      const maxSmog = Math.max(data1.smogLevel, data2.smogLevel);
+      const normalizedData = [
+        [parseFloat(location1.lat), parseFloat(location1.lng), data1.smogLevel / maxSmog],
+        [parseFloat(location2.lat), parseFloat(location2.lng), data2.smogLevel / maxSmog]
+      ];
+
+      setHeatmapData(normalizedData);
     } catch (err) {
-      setError(`Location ${index+1} error: ${err.response?.data?.error || err.message || "Server error"}`);
+      setError('Failed to load smog data. Please check coordinates and try again.');
     } finally {
-      const newLoading = [...isLoading];
-      newLoading[index] = false;
-      setIsLoading(newLoading);
+      setLoading(false);
     }
   };
 
-  const handleLocationChange = (index, field, value) => {
-    const newLocations = [...locations];
-    newLocations[index][field] = value;
-    setLocations(newLocations);
-  };
-
-  const handleFetchAll = () => {
-    handleFetchAQI(0);
-    handleFetchAQI(1);
-  };
-
   return (
-    <div className="app">
-      <h1>Air Quality Comparison</h1>
+    <div className="App">
+      <h1>Pakistan Smog Density Map</h1>
       
-      <div className="location-inputs">
-        {[0, 1].map((index) => (
-          <div key={index} className="location-group">
-            <h3>Location {index+1}</h3>
-            <div className="input-group">
-              <input
-                type="number"
-                step="any"
-                placeholder="Latitude"
-                value={locations[index].lat}
-                onChange={(e) => handleLocationChange(index, 'lat', e.target.value)}
-              />
-              <input
-                type="number"
-                step="any"
-                placeholder="Longitude"
-                value={locations[index].lng}
-                onChange={(e) => handleLocationChange(index, 'lng', e.target.value)}
-              />
-              <button 
-                onClick={() => handleFetchAQI(index)}
-                disabled={isLoading[index]}
-              >
-                {isLoading[index] ? 'Loading...' : 'Get AQI'}
-              </button>
-            </div>
+      <div className="input-form">
+        <form onSubmit={handleSubmit}>
+          <div className="input-group">
+            <h3>Location 1</h3>
+            <input
+              type="text"
+              placeholder="Latitude"
+              value={location1.lat}
+              onChange={(e) => setLocation1({...location1, lat: e.target.value})}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Longitude"
+              value={location1.lng}
+              onChange={(e) => setLocation1({...location1, lng: e.target.value})}
+              required
+            />
           </div>
-        ))}
-      </div>
-
-      <button className="fetch-all" onClick={handleFetchAll}>
-        Compare Both Locations
-      </button>
-
-      <div className="test-coordinates">
-        <button onClick={() => {
-          handleLocationChange(0, 'lat', '35.6762');
-          handleLocationChange(0, 'lng', '139.6503');
-        }}>
-          Tokyo (Loc 1)
-        </button>
-        <button onClick={() => {
-          handleLocationChange(1, 'lat', '40.7128');
-          handleLocationChange(1, 'lng', '-74.0060');
-        }}>
-          New York (Loc 2)
-        </button>
-      </div>
-
-      {error && (
-        <div className="error-message">
-          ⚠️ {error}
-          <button onClick={() => setError('')} className="dismiss-button">
-            ×
+          
+          <div className="input-group">
+            <h3>Location 2</h3>
+            <input
+              type="text"
+              placeholder="Latitude"
+              value={location2.lat}
+              onChange={(e) => setLocation2({...location2, lat: e.target.value})}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Longitude"
+              value={location2.lng}
+              onChange={(e) => setLocation2({...location2, lng: e.target.value})}
+              required
+            />
+          </div>
+          
+          <button type="submit" disabled={loading}>
+            {loading ? 'Loading...' : 'Show Smog Density'}
           </button>
-        </div>
-      )}
+        </form>
+        {error && <p className="error">{error}</p>}
+      </div>
 
-      <div className="comparison-results">
-        {[0, 1].map((index) => (
-          <div key={index} className="aqi-result">
-            {isLoading[index] ? (
-              <div className="loading-indicator">Loading Location {index+1} data...</div>
-            ) : aqiData[index] ? (
-              <>
-                <h2>Location {index+1}: {aqiData[index].location.lat}, {aqiData[index].location.lng}</h2>
-                <div className="aqi-metrics">
-                  <div className="metric">
-                    <span className="metric-label">PM2.5:</span>
-                    <span className="metric-value">{aqiData[index].pm25} µg/m³</span>
-                  </div>
-                  <div className="metric">
-                    <span className="metric-label">PM10:</span>
-                    <span className="metric-value">{aqiData[index].pm10} µg/m³</span>
-                  </div>
-                  <div className="metric">
-                    <span className="metric-label">Smog Level:</span>
-                    <span className="metric-value">
-                      {aqiData[index].smogLevel?.toFixed(2) ?? 'N/A'}
-                    </span>
-                  </div>
-                  <div className="metric">
-                    <span className="metric-label">AQI:</span>
-                    <span 
-                      className="metric-value aqi-level"
-                      style={{ backgroundColor: getAqiColor(aqiData[index].aqiLevel) }}
-                    >
-                      {aqiData[index].aqiLevel} (1=Best, 5=Worst)
-                    </span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="no-data">No data for Location {index+1}</div>
-            )}
-          </div>
-        ))}
+      <MapContainer
+        center={[30.3753, 69.3451]} // Center on Pakistan
+        zoom={6}
+        style={{ height: '70vh', width: '100%' }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        <HeatmapLayer data={heatmapData} />
+        
+        {/* Markers for the input locations */}
+        {heatmapData.length > 0 && (
+          <>
+            <Marker position={[heatmapData[0][0], heatmapData[0][1]]}>
+              <Popup>
+                <strong>Location 1</strong><br />
+                Smog Level: {(heatmapData[0][2] * 100).toFixed(1)}%
+              </Popup>
+            </Marker>
+            <Marker position={[heatmapData[1][0], heatmapData[1][1]]}>
+              <Popup>
+                <strong>Location 2</strong><br />
+                Smog Level: {(heatmapData[1][2] * 100).toFixed(1)}%
+              </Popup>
+            </Marker>
+          </>
+        )}
+      </MapContainer>
+
+      <div className="legend">
+        <h4>Smog Density</h4>
+        <div><span style={{ background: 'blue' }}></span>Low</div>
+        <div><span style={{ background: 'cyan' }}></span>Moderate</div>
+        <div><span style={{ background: 'lime' }}></span>High</div>
+        <div><span style={{ background: 'yellow' }}></span>Very High</div>
+        <div><span style={{ background: 'red' }}></span>Extreme</div>
       </div>
     </div>
   );
 }
 
-export default App;
+export default SmogDensityMap;
