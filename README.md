@@ -46,7 +46,7 @@
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/pakistan-smog-heatmap.git
+   git clone https://github.com/VE-Vaniya/HeatMap.git
    cd pakistan-smog-heatmap
     cd frontend
     npm install
