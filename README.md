@@ -1,8 +1,5 @@
 # Pakistan Smog Density Heatmap 🌫️🗺️
 
-![Heatmap Visualization](screenshot.png)  
-*Interactive smog density visualization across Pakistan*
-
 ## 🌟 Features
 
 ### Interactive Visualization
