@@ -1,52 +1,63 @@
 # Pakistan Smog Density Heatmap 🌫️🗺️
 
-![Heatmap Visualization](screenshot.png) <!-- Add your screenshot path here -->
-
-A React + Leaflet application that visualizes smog density across Pakistan using interactive heatmaps, powered by Flask backend data.
+![Heatmap Visualization](screenshot.png)  
+*Interactive smog density visualization across Pakistan*
 
 ## 🌟 Features
 
-- **Interactive Heatmap Visualization**
-  - Color-coded smog density (blue → red gradient)
-  - Dynamic intensity rendering
-  - Customizable radius and blur effects
+### Interactive Visualization
+- Color-gradient heatmap (blue = low, red = extreme smog)
+- Dynamic intensity rendering based on real-time data
+- Customizable radius and blur effects for optimal display
 
-- **Location Comparison**
-  - Compare smog levels between two geographic points
-  - Side-by-side marker visualization
-  - Normalized data representation (0-100% scale)
+### Location Comparison
+- Compare smog levels between any two geographic points
+- Visual markers with popup details
+- Normalized data representation (0-100% scale)
 
-- **Technical Implementation**
-  - React frontend with Leaflet maps
-  - Leaflet.heat plugin for performant heatmaps
-  - Flask backend API for AQI data
-  - Responsive design for all screen sizes
+### Technical Features
+- React frontend with Leaflet mapping
+- Flask backend API serving AQI data
+- Responsive design for all devices
+- Easy-to-use coordinate input system
 
 ## 🛠️ Tech Stack
 
 **Frontend**:
-- React.js
-- Leaflet (with leaflet.heat plugin)
-- HTML5/CSS3
+- React.js (v18+)
+- Leaflet (v1.9+) with leaflet.heat plugin
+- HTML5/CSS3 (Flexbox/Grid layout)
 
 **Backend**:
-- Python Flask
-- REST API endpoints
+- Python (v3.8+)
+- Flask (v2.0+)
+- Flask-CORS for cross-origin support
 
-**Data**:
-- Real-time AQI/smog data
-- Geographic coordinate processing
+**Data Processing**:
+- Real-time AQI/smog data normalization
+- Geographic coordinate validation
+- Dynamic heatmap intensity calculation
 
-## 🚀 Installation
+## 🚀 Getting Started
 
-### Frontend Setup
-```bash
-# Clone repository
-git clone https://github.com/yourusername/pakistan-smog-heatmap.git
-cd pakistan-smog-heatmap/frontend
+### Prerequisites
+- Node.js (v16+)
+- Python (v3.8+)
+- Git
 
-# Install dependencies
-npm install
+### Installation
 
-# Start development server
-npm start
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/pakistan-smog-heatmap.git
+   cd pakistan-smog-heatmap
+    cd frontend
+    npm install
+    cd ../backend
+    python -m venv venv
+# Linux/Mac:
+    source venv/bin/activate
+# Windows:
+    .\venv\Scripts\activate
+    pip install -r requirements.txt
+    flask run
